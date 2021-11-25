@@ -1,0 +1,50 @@
+main > .container {
+    padding: 60px 15px 0;
+  }
+  
+img.card-img {
+  width: 260px;
+  height: 260px;
+}
+
+.data-updated {
+  -webkit-animation: 2s ddata-updated-change;
+  animation: 2s data-updated-change;
+}
+
+@-webkit-keyframes data-updated-change {
+  50%,
+  from {
+    background-color: rgba(51,51,51,.08);
+  }
+}
+
+@keyframes data-updated-change {
+  50%,
+  from {
+    background-color: rgba(51,51,51,.08);
+  }
+}
+
+.alert-container {
+  position: fixed;
+  width: 80%;
+  z-index: 5;
+}
+
+.state-label {
+  float: right;
+  border-style: solid;
+  border-width: 3px;
+  padding: 6px;
+  border-radius: 45%;
+}
+
+.state-label.witout-offers {
+  color: blue;
+  border-color: blue;
+}
+.state-label.sold {
+  color: red;
+  border-color: red;
+}
