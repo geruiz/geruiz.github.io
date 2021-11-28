@@ -2,13 +2,15 @@
  * This object wrap the contract to be used by de dapp.
  * 
  * @param _contract Contract object created from web3.
- * @param _ipfs IPFS instance.
+ * @param _ipfs IPFS client.
+ * @param _publishCost Cost of create a publication.
  * @param _errorHandler Where logs errors generated from the contract calls.
  */
-function MarketSite(_contract, _ipfs, _errorHandler) {
+function MarketSite(_contract, _ipfs, _publishCost, _errorHandler) {
     this.self = this;
-    this.contract = _contract;
     this.ipfs = _ipfs;
+    this.publishCost = _publishCost;
+    this.contract = _contract;
     this.eventsHandlers={};
 
     // public constants
@@ -17,7 +19,8 @@ function MarketSite(_contract, _ipfs, _errorHandler) {
         ValueChanged: "ValueChanged",
         ItemSold: "ItemSold",
         ItemPaid: "ItemPaid",
-        OwnershipTransferred: "OwnershipTransferred"
+        OwnershipTransferred: "OwnershipTransferred",
+        PublicationCost: "PublicationCost"
     };
 
     this.State = {
@@ -33,6 +36,11 @@ function MarketSite(_contract, _ipfs, _errorHandler) {
             console.log(err);
             return;
         }
+        // this object keep a copy for the publication cost
+        if (event.event === "PublicationCost") {
+            this.publishCost = event.returnValues.publicationCost;
+        }
+
         let handlers = this.eventsHandlers[event.event];
         if (handlers) {
             for(let pos in handlers) {
@@ -158,14 +166,11 @@ function MarketSite(_contract, _ipfs, _errorHandler) {
             return Promise.reject("The initial value must be less than max value");
         }
         return getUserAddress()
-            .then(address => {
-                return this.ipfs.add(JSON.stringify(objData))
-                    .then(data => {
-                        var cid = data.cid.toString();
-                        return this.contract.methods.publishItem(cid, initialValue, maxValue)
-                            .send({from: address, value:maxValue });
-                });
-            });
+            .then(address => this.ipfs.addJSON(objData)
+                .then(hash => 
+                    this.contract.methods.publishItem(hash, initialValue, maxValue)
+                        .send({from: address, value: this.publishCost }))
+            );
     };
 
     /**
@@ -217,8 +222,21 @@ function MarketSite(_contract, _ipfs, _errorHandler) {
         return getUserAddress()
             .then(address => {
                 return this.contract.methods.transferOwnership(newAddress)
-                 .send({from: address});
+                    .send({from: address});
         });
     };
 
+    /**
+     * Change the publication cost for a product.
+     * 
+     * @param {number} newCost The new value for publication cost.
+     * @returns a Promise with the transaction.
+     */
+    this.setPublicationCost = function(newCost) {
+        return getUserAddress()
+            .then(address => {
+                return this.contract.methods.setPublicationCost(newCost)
+                    .send({from: address});
+        });
+    }
 }

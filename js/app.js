@@ -1,12 +1,8 @@
 // global constants
-const IPFS_HOST = 'localhost';
-const IPFS_PORT = 5001;
-const IPFS_PUBLIC_URL = 'http://localhost:8080/ipfs/';
 const NETWORK = '127.0.0.1:7545';  // expected network
 
 // global variables
 var web3;
-var ipfs;
 var marketSite;
 
 function showAddress() {
@@ -46,9 +42,11 @@ function installWeb3() {
     }
     web3 = new Web3(window.ethereum);
     var contract = new web3.eth.Contract(MarketSiteABI.abi, MarketSiteAddress);
-    return contract.methods.owner().call()
-        .then(() => {
-            marketSite =  new MarketSite(contract, ipfs, showErrorMessage);
+    return contract.methods.getPublicationCost()
+        .call()
+        .then(cost => {
+            var ipfs = new ipfsApiClient();  // can be Pinata implementation
+            marketSite =  new MarketSite(contract, ipfs, cost, showErrorMessage);
             web3.currentProvider.on('connect', showAddress);
             web3.currentProvider.on('disconnect', showAddress);
             web3.currentProvider.on('accountsChanged', showAddress);
@@ -61,29 +59,29 @@ function installWeb3() {
         });
 }
 
-function installIPFS() {
-    if (!window.IpfsHttpClient) {
-        return Promise.reject("IPFS client not detected!");
-    }
-    ipfs = window.IpfsHttpClient.create({ host: IPFS_HOST, port: IPFS_PORT });
-    return Promise.resolve(ipfs);
-}
-
 function installNavBar() {
-    $("a.nav-link").removeClass("disabled");
-    $("a.nav-link").click(function(e) {
-        e.preventDefault();
-        let url = e.target.href;
-        url = url.substring(url.indexOf('#')+ 1);
-        $.get(url + ".html", function (data) {
-            $(".alert-container").empty();
-            $(".nav-link.active").removeClass("active");
-            $("body").trigger('replacePane');
-            $(".main").empty()
-                .append(data);
-            $(e.target).addClass("active");
-        });
-        return false;
+    return new Promise((resolve, reject) => {
+        try {
+            $("a.nav-link").removeClass("disabled");
+            $("a.nav-link").click(function(e) {
+                e.preventDefault();
+                let url = e.target.href;
+                url = url.substring(url.indexOf('#')+ 1);
+                $.get(url + ".html", function (data) {
+                    $(".alert-container").empty();
+                    $(".nav-link.active").removeClass("active");
+                    $("body").trigger('replacePane');
+                    $(".main").empty()
+                        .append(data);
+                    $(e.target).addClass("active");
+                });
+                return false;
+            });
+            resolve();
+        }
+        catch (e) {
+            reject(e);
+        }
     });
 }
 
@@ -100,16 +98,8 @@ function getUserAddress() {
 }
 
 window.onload=function() {
-    installIPFS()
-        .then(installWeb3)
-        .then(() => {
-            try {
-                installNavBar();
-            }
-            catch (e) {
-            showErrorMessage(e);
-            }
-        })
+    installWeb3()
+        .then(installNavBar)
         .catch((e) => {
             showErrorMessage(e);
         });
