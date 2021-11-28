@@ -1,5 +1,5 @@
 // global constants
-const NETWORK = '127.0.0.1:7545';  // expected network
+const NETWORK = 'Ropsten';  // expected network
 
 // global variables
 var web3;
@@ -7,14 +7,26 @@ var marketSite;
 
 function showAddress() {
     const prov = web3.currentProvider;
-    let newVal;
+    const infoLabel = $("#info_address");
+    infoLabel.children().remove();
     if (prov.isConnected()) {
-        newVal = prov.selectedAddress ? prov.selectedAddress : "Connected";
+        const newVal = prov.selectedAddress;
+        if (newVal) {
+            infoLabel.text(newVal);
+        }
+        else {
+            infoLabel.text("");
+            infoLabel.append($("<a href='#' class='nav-link'>Connect</a>")
+                .on('click', (e) => {
+                    e.preventDefault();
+                    getUserAddress();
+                    return false;
+                }));
+        }
     }
     else {
-        newVal = "Disconnected";
+        infoLabel.text("Disconnected");
     }
-    $("#info_address").text(newVal);
     $("body").trigger('changeAddress', { connected: prov.isConnected(), address: prov.selectedAddress });
 }
 
